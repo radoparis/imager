@@ -169,24 +169,25 @@ class Annotator(QWidget):
 
         base_dir = os.path.dirname(self.image_path)
         base_name = os.path.basename(self.image_path)
-        name_without_ext = os.path.splitext(base_name)[0]
-        default_name = f"circle_{name_without_ext}.jpg"
+        name_without_ext, ext = os.path.splitext(base_name)
 
+        # Force save name to .jpg
+        save_name = f"taged_{name_without_ext}.jpg"
         save_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Annotated Image",
-            os.path.join(base_dir, default_name),
+            os.path.join(base_dir, save_name),
             "JPEG Image (*.jpg)"
         )
 
         if not save_path:
             return
 
-        # Ensure the file ends with .jpg
+        # Ensure it ends with .jpg
         if not save_path.lower().endswith(".jpg"):
             save_path += ".jpg"
 
-        # Draw and save
+        # Draw and save the tagged image
         img = Image.open(self.image_path).convert("RGB")
         draw = ImageDraw.Draw(img)
 
@@ -198,7 +199,16 @@ class Annotator(QWidget):
         img.save(save_path, "JPEG")
         print(f"✅ Saved to {save_path}")
 
-        # 🧹 Clear state and show "Saved" message
+        # 🔁 Rename the original image to xxx_<original>
+        old_path = self.image_path
+        new_path = os.path.join(base_dir, f"xxx_{name_without_ext}{ext}")
+        try:
+            os.rename(old_path, new_path)
+            print(f"🔄 Renamed original to: {new_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to rename original image: {e}")
+
+        # 🧼 Clear state and show saved message
         self.image_path = None
         self.original_pixmap = None
         self.rects.clear()
@@ -206,7 +216,6 @@ class Annotator(QWidget):
         self.dragging = False
         self.resizing = False
 
-        # Show message
         blank = QPixmap(400, 200)
         blank.fill(Qt.white)
         painter = QPainter(blank)
